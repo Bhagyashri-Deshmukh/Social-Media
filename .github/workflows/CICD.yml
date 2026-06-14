@@ -11,15 +11,6 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Build with Maven
-        run: mvn clean package -DskipTests
-
       - name: Prepare SSH key
         run: |
           mkdir -p ~/.ssh
@@ -27,12 +18,13 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ secrets.GCP_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Upload JAR to VM
+      - name: Upload code to VM
         run: |
-          scp target/*.jar ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }}:/tmp/app.jar
+          scp -R src pom.xml ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }}:/tmp
 
       - name: Deploy on VM
         run: |
           ssh ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }} << 'EOF'
-            java -jar /tmp/app.jar
+            cd /tmp
+            mvn spring-boot:run &
           EOF
